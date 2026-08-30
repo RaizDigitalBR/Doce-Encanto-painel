@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doce Encanto – Painel de Pedidos</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="script.js?v=1.1"></script>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="tela-login">
+    <div class="login-box">
+        <img src="doce_encanto_logo.png" alt="Doce Encanto" class="login-logo">
+        <h2>Acesso restrito</h2>
+        <label>Email</label>
+        <input type="email" id="input-email" placeholder="email@doceencanto.com">
+        <label>Senha</label>
+        <input type="password" id="input-senha" placeholder="••••••••">
+        <p id="erro-login"></p>
+        <p id="msg-login"></p>
+        <button onclick="fazerLogin()">Entrar</button>
+        <a href="#" id="link-esqueci" onclick="return fazerResetSenha()" class="link-esqueci-senha">Esqueci minha senha</a>
+    </div>
+</div>
+
+<!-- TELA DO PAINEL -->
+<div id="tela-painel">
+
+    <header>
+        <div>
+            <img src="doce_encanto_logo.png" alt="Doce Encanto" class="header-logo">
+            <h2>Painel de Pedidos</h2>
+        </div>
+        <div class="header-info">
+            <!-- Botão que pausa/reabre o recebimento de pedidos. Clicando aqui
+                 você grava em config/pedidos (Firestore) e o site da cliente
+                 atualiza na hora — ela não consegue mais "Fazer Pedido"
+                 enquanto estiver pausado. -->
+            <button class="btn-header pedidos-toggle" id="btnPedidos" onclick="togglePedidos()">🟢 Pedidos: Abertos</button>
+            <!-- Entrega desativada por enquanto — campo oculto, não removido,
+                 pra reativar depois é só tirar a classe "oculto" daqui. -->
+            <div class="taxa-entrega-box oculto">
+                <label for="input-taxa-entrega">Taxa entrega R$</label>
+                <input type="number" id="input-taxa-entrega" step="0.01" min="0" value="0.00" onchange="salvarTaxaEntrega()">
+            </div>
+            <span class="pill-online">Online</span>
+            <span class="atualizado-header" id="atualizado-em">Aguardando...</span>
+            <button class="btn-header" id="btnSom" onclick="toggleSom()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7" stroke-linecap="round"/></svg>
+                Som: off
+            </button>
+            <button class="btn-header limpar" onclick="confirmarLimpeza()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6h12z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Limpar concluídos
+            </button>
+            <button class="btn-header sair" onclick="fazerLogout()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Sair
+            </button>
+        </div>
+    </header>
+
+    <div class="abas">
+        <button class="aba ativa" onclick="mudarAba('pendente', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Novos <span class="num" id="n-pendente">0</span>
+        </button>
+        <button class="aba" onclick="mudarAba('preparando', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21c0-4 3-6 8-6s8 2 8 6M8 9a4 4 0 1 1 8 0c0 2-1 3-2 4H10c-1-1-2-2-2-4z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Preparando <span class="num" id="n-preparando">0</span>
+        </button>
+        <button class="aba" onclick="mudarAba('pronto', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Prontos <span class="num" id="n-pronto">0</span>
+        </button>
+        <button class="aba" onclick="mudarAba('entregue', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 8 12 3 3 8l9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Concluídos <span class="num" id="n-entregue">0</span>
+        </button>
+        <button class="aba" onclick="mudarAba('cardapio', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 2v20" stroke-linecap="round"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Cardápio
+        </button>
+    </div>
+
+    <main>
+        <div class="grid-pedidos" id="grid-pedidos">
+            <div class="vazio"><p>Carregando pedidos...</p></div>
+        </div>
+    </main>
+
+</div>
+
+<!-- MODAL LIMPEZA -->
+<div class="modal-overlay" id="modalLimpeza">
+    <div class="modal">
+        <h3>Limpar concluídos</h3>
+        <p>Isso vai apagar todos os pedidos com status <strong>concluído</strong> ou <strong>cancelado</strong>. Confirma?</p>
+        <div class="modal-acoes">
+            <button class="btn-cancelar-modal" onclick="fecharModal()">Cancelar</button>
+            <button class="btn-confirmar" onclick="limparConcluidos()">Confirmar</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ITEM CARDÁPIO -->
+<div class="modal-overlay" id="modalItem">
+    <div class="modal" style="max-width:440px;text-align:left">
+        <h3 id="modal-item-titulo">Novo item</h3>
+        <p style="margin-bottom:1rem"></p>
+
+        <label class="label-campo">Nome *</label>
+        <input type="text" id="item-nome" class="input-campo" placeholder="Ex: Brigadeiro gourmet">
+
+        <label class="label-campo">Descrição</label>
+        <input type="text" id="item-desc" class="input-campo" placeholder="Ex: Caixa com 6 unidades">
+
+        <label class="label-campo">Categoria *</label>
+        <input type="text" id="item-categoria" class="input-campo" list="lista-categorias-sugestao" placeholder="Ex: Doces, Bolos, Bebidas...">
+        <datalist id="lista-categorias-sugestao"></datalist>
+
+        <label class="label-campo">Preço (R$) *</label>
+        <input type="number" id="item-preco" class="input-campo" placeholder="0,00" step="0.01" min="0">
+
+        <p id="erro-item" class="erro-campo"></p>
+
+        <div class="modal-acoes">
+            <button class="btn-cancelar-modal" onclick="fecharModalItem()">Cancelar</button>
+            <button class="btn-confirmar" style="background:#b5179e;color:#fff" onclick="salvarItem()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="notif" id="notif">
+    <div class="notif-titulo" id="notif-titulo"></div>
+    <div class="notif-desc" id="notif-desc"></div>
+</div>
+
+</body>
+</html>
